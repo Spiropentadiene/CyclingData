@@ -1,114 +1,258 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bike Ride Stats</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graph Display</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        .graph-container {
+            position: relative;
+            width: 800px;
+            height: 800px;
+        }
+        .large-graph {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+        .small-graph {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            background-color: white;
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        #top-left {
+            top: 0;
+            left: 0;
+        }
+        #top-right {
+            top: 0;
+            right: 0;
+        }
+        #bottom-left {
+            bottom: 0;
+            left: 0;
+        }
+        #bottom-right {
+            bottom: 0;
+            right: 0;
+        }
+        .canvas-container {
+            position: relative;
+        }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Bike Ride Stats</h1>
 
-    <!-- Dropdown Menu -->
-    <label for="weeks-select">Select number of weeks:</label>
-    <select id="weeks-select" onchange="updateGraphs()">
-      <option value="1">1 Week</option>
-      <option value="4">4 Weeks</option>
-      <option value="8">8 Weeks</option>
-      <option value="26">26 Weeks</option>
-      <option value="52">52 Weeks</option>
-    </select>
+<div class="graph-container">
+    <canvas id="largeGraph" class="large-graph"></canvas>
 
-    <div class="graphs">
-      <!-- Graph containers -->
-      <canvas id="distanceGraph"></canvas>
-      <canvas id="speedGraph"></canvas>
-      <canvas id="timeGraph"></canvas>
-      <canvas id="caloriesGraph"></canvas>
-      <canvas id="heartRateGraph"></canvas>
-      <canvas id="ascentGraph"></canvas>
+    <!-- Small Graphs -->
+    <div id="top-left" class="small-graph">
+        <canvas id="graph1"></canvas>
     </div>
-  </div>
+    <div id="top-right" class="small-graph">
+        <canvas id="graph2"></canvas>
+    </div>
+    <div id="bottom-left" class="small-graph">
+        <canvas id="graph3"></canvas>
+    </div>
+    <div id="bottom-right" class="small-graph">
+        <canvas id="graph4"></canvas>
+    </div>
+</div>
 
-  <script>
-    // Color palette
-    const colors = ["#DDA853", "#16404D", "#A6CDC6", "#FBF5DD"];
+<script>
+    // Data for the 4th of January 2025 (placeholders)
+    const dates = ["2025-01-04", "2025-01-05", "2025-01-06", "2025-01-07", "2025-01-08"];
+    const distance = [10, 15, 12, 17, 19];  // Placeholder distance data
+    const speed = [5, 6, 4.5, 7, 5.5];    // Placeholder speed data
+    const time = [60, 65, 63, 60, 62];    // Placeholder time data
+    const heartRate = [120, 130, 125, 135, 128];  // Placeholder heart rate data
+    const ascent = [100, 150, 120, 180, 160];    // Placeholder ascent data
 
-    // Fetch the data from the JSON file
-    fetch('data.json')
-      .then(response => response.json())
-      .then(data => {
-        window.rideData = data; // Store the data globally
-        updateGraphs();
-      })
-      .catch(error => console.error('Error fetching data:', error));
-
-    function updateGraphs() {
-      const weeks = parseInt(document.getElementById('weeks-select').value);
-      const filteredData = filterDataByWeeks(weeks);
-
-      const labels = filteredData.map(entry => entry.date);
-      const distanceData = filteredData.map(entry => entry.distance);
-      const speedData = filteredData.map(entry => entry.speed);
-      const timeData = filteredData.map(entry => entry.time);
-      const caloriesData = filteredData.map(entry => entry.calories);
-      const heartRateData = filteredData.map(entry => entry.heartRateAverage);
-      const ascentData = filteredData.map(entry => entry.ascent);
-
-      // Create graphs
-      createGraph('distanceGraph', labels, distanceData, 'Distance (km)', colors[0]);
-      createGraph('speedGraph', labels, speedData, 'Speed (km/h)', colors[1]);
-      createGraph('timeGraph', labels, timeData, 'Time (hrs)', colors[2]);
-      createGraph('caloriesGraph', labels, caloriesData, 'Calories', colors[3]);
-      createGraph('heartRateGraph', labels, heartRateData, 'Avg Heart Rate (bpm)', colors[0]);
-      createGraph('ascentGraph', labels, ascentData, 'Ascent (m)', colors[1]);
-    }
-
-    // Filter data based on selected number of weeks
-    function filterDataByWeeks(weeks) {
-      const endDate = new Date();
-      const startDate = new Date();
-      startDate.setDate(endDate.getDate() - (weeks * 7)); // Calculate the start date for the selected weeks
-
-      return window.rideData.filter(entry => {
-        const rideDate = new Date(entry.date);
-        return rideDate >= startDate && rideDate <= endDate;
-      });
-    }
-
-    // Function to create a chart
-    function createGraph(canvasId, labels, data, label, color) {
-      const ctx = document.getElementById(canvasId).getContext('2d');
-      if (window[canvasId]) {
-        window[canvasId].destroy(); // Destroy previous chart if it exists
-      }
-      window[canvasId] = new Chart(ctx, {
+    // Larger Graph (Distance vs Time)
+    const ctxLarge = document.getElementById("largeGraph").getContext("2d");
+    new Chart(ctxLarge, {
         type: 'line',
         data: {
-          labels: labels,
-          datasets: [{
-            label: label,
-            data: data,
-            borderColor: color,
-            backgroundColor: color + '80', // Transparent fill
-            fill: true,
-            tension: 0.4,
-            borderWidth: 2,
-          }]
+            labels: dates,
+            datasets: [{
+                label: 'Distance',
+                data: distance,
+                borderColor: 'blue',
+                borderWidth: 2,
+                fill: false
+            }]
         },
         options: {
-          scales: {
-            y: {
-              beginAtZero: true
+            responsive: true,
+            scales: {
+                x: {
+                    type: 'category',
+                    title: {
+                        display: true,
+                        text: 'Time'
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Distance (km)'
+                    }
+                }
             }
-          },
-          responsive: true,
-          maintainAspectRatio: false
         }
-      });
-    }
-  </script>
+    });
+
+    // Smaller Graph 1 (Speed)
+    const ctx1 = document.getElementById("graph1").getContext("2d");
+    new Chart(ctx1, {
+        type: 'line',
+        data: {
+            labels: dates,
+            datasets: [{
+                label: 'Speed',
+                data: speed,
+                borderColor: 'green',
+                borderWidth: 2,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    type: 'category',
+                    title: {
+                        display: true,
+                        text: 'Time'
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Speed (km/h)'
+                    }
+                }
+            }
+        }
+    });
+
+    // Smaller Graph 2 (Heart Rate)
+    const ctx2 = document.getElementById("graph2").getContext("2d");
+    new Chart(ctx2, {
+        type: 'line',
+        data: {
+            labels: dates,
+            datasets: [{
+                label: 'Heart Rate',
+                data: heartRate,
+                borderColor: 'red',
+                borderWidth: 2,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    type: 'category',
+                    title: {
+                        display: true,
+                        text: 'Time'
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Heart Rate (bpm)'
+                    }
+                }
+            }
+        }
+    });
+
+    // Smaller Graph 3 (Ascent)
+    const ctx3 = document.getElementById("graph3").getContext("2d");
+    new Chart(ctx3, {
+        type: 'line',
+        data: {
+            labels: dates,
+            datasets: [{
+                label: 'Ascent',
+                data: ascent,
+                borderColor: 'purple',
+                borderWidth: 2,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    type: 'category',
+                    title: {
+                        display: true,
+                        text: 'Time'
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Ascent (m)'
+                    }
+                }
+            }
+        }
+    });
+
+    // Smaller Graph 4 (Time)
+    const ctx4 = document.getElementById("graph4").getContext("2d");
+    new Chart(ctx4, {
+        type: 'line',
+        data: {
+            labels: dates,
+            datasets: [{
+                label: 'Time',
+                data: time,
+                borderColor: 'orange',
+                borderWidth: 2,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    type: 'category',
+                    title: {
+                        display: true,
+                        text: 'Time'
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Time (min)'
+                    }
+                }
+            }
+        }
+    });
+</script>
+
 </body>
 </html>
