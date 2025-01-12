@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bike Ride Stats</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>Bike Ride Stats</h1>
+
+    <!-- Dropdown Menu -->
+    <label for="weeks-select">Select number of weeks:</label>
+    <select id="weeks-select" onchange="updateGraphs()">
+      <option value="1">1 Week</option>
+      <option value="4">4 Weeks</option>
+      <option value="8">8 Weeks</option>
+      <option value="26">26 Weeks</option>
+      <option value="52">52 Weeks</option>
+    </select>
+
+    <div class="graphs">
+      <!-- Graph containers -->
+      <canvas id="distanceGraph"></canvas>
+      <canvas id="speedGraph"></canvas>
+      <canvas id="timeGraph"></canvas>
+      <canvas id="caloriesGraph"></canvas>
+      <canvas id="heartRateGraph"></canvas>
+      <canvas id="ascentGraph"></canvas>
+    </div>
+  </div>
+
+  <script>
+    // Color palette
+    const colors = ["#DDA853", "#16404D", "#A6CDC6", "#FBF5DD"];
+
+    // Fetch the data from the JSON file
+    fetch('data.json')
+      .then(response => response.json())
+      .then(data => {
+        window.rideData = data; // Store the data globally
+        updateGraphs();
+      })
+      .catch(error => console.error('Error fetching data:', error));
+
+    function updateGraphs() {
+      const weeks = parseInt(document.getElementById('weeks-select').value);
+      const filteredData = filterDataByWeeks(weeks);
+
+      const labels = filteredData.map(entry => entry.date);
+      const distanceData = filteredData.map(entry => entry.distance);
+      const speedData = filteredData.map(entry => entry.speed);
+      const timeData = filteredData.map(entry => entry.time);
+      const caloriesData = filteredData.map(entry => entry.calories);
+      const heartRateData = filteredData.map(entry => entry.heartRateAverage);
+      const ascentData = filteredData.map(entry => entry.ascent);
+
+      // Create graphs
+      createGraph('distanceGraph', labels, distanceData, 'Distance (km)', colors[0]);
+      createGraph('speedGraph', labels, speedData, 'Speed (km/h)', colors[1]);
+      createGraph('timeGraph', labels, timeData, 'Time (hrs)', colors[2]);
+      createGraph('caloriesGraph', labels, caloriesData, 'Calories', colors[3]);
+      createGraph('heartRateGraph', labels, heartRateData, 'Avg Heart Rate (bpm)', colors[0]);
+      createGraph('ascentGraph', labels, ascentData, 'Ascent (m)', colors[1]);
+    }
+
+    // Filter data based on selected number of weeks
+    function filterDataByWeeks(weeks) {
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(endDate.getDate() - (weeks * 7)); // Calculate the start date for the selected weeks
+
+      return window.rideData.filter(entry => {
+        const rideDate = new Date(entry.date);
+        return rideDate >= startDate && rideDate <= endDate;
+      });
+    }
+
+    // Function to create a chart
+    function createGraph(canvasId, labels, data, label, color) {
+      const ctx = document.getElementById(canvasId).getContext('2d');
+      if (window[canvasId]) {
+        window[canvasId].destroy(); // Destroy previous chart if it exists
+      }
+      window[canvasId] = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: label,
+            data: data,
+            borderColor: color,
+            backgroundColor: color + '80', // Transparent fill
+            fill: true,
+            tension: 0.4,
+            borderWidth: 2,
+          }]
+        },
+        options: {
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          },
+          responsive: true,
+          maintainAspectRatio: false
+        }
+      });
+    }
+  </script>
+</body>
+</html>
